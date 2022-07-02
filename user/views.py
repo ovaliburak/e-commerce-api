@@ -70,11 +70,8 @@ class LoginAPIView(generics.GenericAPIView):
 
     def post(self, request):
         user = request.data
-        print(user)
         serializer = self.serializer_class(data=user)
         serializer.is_valid(raise_exception=True)
-        print(request.user)
-        print(request.auth)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class ExampleAPIView(views.APIView):

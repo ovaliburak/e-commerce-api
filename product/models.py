@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.utils.text import slugify
 from core.models import TimeStampedModel
 from core.managers import ProductManager
 from . import choices
@@ -30,13 +31,17 @@ class Category(TimeStampedModel):
     
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
 
 
-class ProductInventory(TimeStampedModel):
-    quantity = models.IntegerField(blank=False, null=False, default=0)
+# class ProductInventory(TimeStampedModel):
+#     quantity = models.IntegerField(blank=False, null=False, default=0)
 
-    def __str__(self):
-        return str(self.quantity)
+#     def __str__(self):
+#         return str(self.quantity)
 
 class ProductDiscount(TimeStampedModel):
     name = models.CharField(max_length=100)
@@ -52,13 +57,13 @@ class ProductDiscount(TimeStampedModel):
 class Product(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
-    desc = models.TextField()
-    category = models.ForeignKey(Category, on_delete=models.DO_NOTHING, related_name='product')
-    product_inventory = models.OneToOneField(ProductInventory, on_delete=models.DO_NOTHING, related_name='product')
+    desc = models.TextField(blank=True, null=False, default='There is no desc.')
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='product')
+    stock = models.IntegerField(default=0)
     price = models.DecimalField(db_index=True, max_digits=6, decimal_places=2, blank=False, null=False, default=0.00)
-    prouduct_discount = models.ForeignKey(ProductDiscount, on_delete=models.DO_NOTHING, related_name='product', 
+    product_discount = models.ForeignKey(ProductDiscount, on_delete=models.DO_NOTHING, related_name='product', 
                                             null=True, blank=True)
-    is_listable = models.BooleanField(default=False, blank=False, null=False)
+    is_listable = models.BooleanField(default=False)
 
     objects = models.Manager() 
     listable = ProductManager() 
