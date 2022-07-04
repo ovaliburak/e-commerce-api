@@ -1,6 +1,8 @@
+from itertools import product
 import uuid
 from django.db import models
 from django.utils.text import slugify
+from requests import request
 from core.models import TimeStampedModel
 from core.managers import ProductManager
 from . import choices
@@ -46,8 +48,8 @@ class Category(TimeStampedModel):
 class ProductDiscount(TimeStampedModel):
     name = models.CharField(max_length=100)
     desc = models.TextField()
-    discount_percent = models.FloatField()
-    discount_quantity = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, default=0.00)
+    discount_percent = models.FloatField(blank=True, null=True, editable=True, default=0.00)
+    # discount_quantity = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, default=0.00)
     active = models.BooleanField(default=False, blank=True, null=True)
 
     def __str__(self):
@@ -57,10 +59,12 @@ class ProductDiscount(TimeStampedModel):
 class Product(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
-    desc = models.TextField(blank=True, null=False, default='There is no desc.')
+    desc = models.TextField(blank=True, null=False)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='product')
     stock = models.IntegerField(default=0)
     price = models.DecimalField(db_index=True, max_digits=6, decimal_places=2, blank=False, null=False, default=0.00)
+    discounted_price = models.DecimalField(db_index=True, max_digits=6, decimal_places=2, blank=True, null=True)
+    discounted = models.BooleanField(db_index=True, default=False, blank=True, null=True)
     product_discount = models.ForeignKey(ProductDiscount, on_delete=models.DO_NOTHING, related_name='product', 
                                             null=True, blank=True)
     is_listable = models.BooleanField(default=False)
@@ -74,3 +78,22 @@ class Product(TimeStampedModel):
     def __str__(self):
         return self.name
     
+
+    @property
+    def get_discount_(self): 
+        
+        if self.product_discount:
+        #     self.discounted_price = self.price*self.product_discount.discount_percent
+        #     self.discounted = True 
+        #     return self.discounted_price
+            return self.product_discount.discount_percent
+        return str(self.product_discount)
+
+    def get_discount(self): 
+        
+        if self.product_discount:
+        #     self.discounted_price = self.price*self.product_discount.discount_percent
+        #     self.discounted = True 
+        #     return self.discounted_price
+            return self.product_discount.discount_percent
+        return str(self.product_discount)
