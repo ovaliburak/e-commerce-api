@@ -14,7 +14,7 @@ class Cart(TimeStampedModel):
 def create_user_cart(sender, created, instance, *args, **kwargs):
     if created:
         Cart.objects.create(user=instance)
-s
+
 class CartItem(TimeStampedModel):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='cart_item')
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='cart_product')
