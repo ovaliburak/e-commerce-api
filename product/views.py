@@ -116,8 +116,8 @@ class ProductRetrieve(RetrieveAPIView):
     serializer_class = serializers.ProductSerializer
     
     def retrieve(self, request, *args, **kwargs):
-        print(kwargs)
-        print(kwargs.get('pk'))
+        # print(kwargs)
+        # print(kwargs.get('pk'))
         object = get_object_or_404(models.Product, pk=kwargs['pk'])
         serializer = self.get_serializer(object)
         return Response(serializer.data, status=status.HTTP_200_OK) 
