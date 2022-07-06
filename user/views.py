@@ -1,4 +1,3 @@
-from urllib import response
 from django.urls import reverse
 from rest_framework import generics
 from django.contrib.auth import get_user_model
@@ -7,27 +6,30 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from rest_framework.response import Response
 from django.contrib.sites.shortcuts import get_current_site
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 from core.utils import Util
 import jwt
 from django.conf import settings
 from rest_framework import views
 
 from .serializers import (
-    RegisterSerializer, 
+    RegisterSerializer,
+    EmployeeRegisterSerializer, 
     EmailVerificationSerializer, 
     LoginSerializer,
     LogoutSerializer)
+from core.permissions import IsNotAuthenticated
+from rest_framework.permissions import IsAdminUser
 
 User =get_user_model()
 
-class RegisterView(generics.GenericAPIView):
+class RegisterAPIView(generics.GenericAPIView):
 
     serializer_class = RegisterSerializer
+    #permission_classes = (IsNotAuthenticated,)
+
     
     def post(self, request):
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         user = User.objects.get(email=request.data['email'])
@@ -43,14 +45,19 @@ class RegisterView(generics.GenericAPIView):
         Util.send_email(data)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+class EmployeeRegisterAPIView(generics.GenericAPIView):
+    serializer_class = EmployeeRegisterSerializer
+    permission_classes = (IsAdminUser, )
+    
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)    
+        serializer.save()
+        return Response({'message':'Employee Successfull created'}, status=status.HTTP_201_CREATED)   
 
 class VerifyEmail(views.APIView):
     serializer_class = EmailVerificationSerializer
 
-    token_param_config = openapi.Parameter(
-        'token', in_=openapi.IN_QUERY, description='Description', type=openapi.TYPE_STRING)
-
-    @swagger_auto_schema(manual_parameters=[token_param_config])
     def get(self, request):
         token = request.GET.get('token')
         try:
@@ -60,13 +67,14 @@ class VerifyEmail(views.APIView):
                 user.is_active = True
                 user.save()
             return Response({'email': 'Successfully activated'}, status=status.HTTP_200_OK)
-        except jwt.ExpiredSignatureError as identifier:
+        except jwt.ExpiredSignatureError:
             return Response({'error': 'Activation Expired'}, status=status.HTTP_400_BAD_REQUEST)
-        # except jwt.exceptions.DecodeError as identifier:
-        #     return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+        except jwt.exceptions.DecodeError:
+            return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginAPIView(generics.GenericAPIView):
     serializer_class = LoginSerializer
+    # permission_classes = (IsNotAuthenticated,)
 
     def post(self, request):
         user = request.data
@@ -74,16 +82,9 @@ class LoginAPIView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-class ExampleAPIView(views.APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-    def get(self, request):
-        return Response({'a':'a'}, status=status.HTTP_200_OK)
-
-
 class LogoutAPIView(generics.GenericAPIView):
     serializer_class = LogoutSerializer
-
-    # permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request):
 

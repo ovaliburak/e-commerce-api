@@ -2,7 +2,8 @@ from django.contrib.auth.models import BaseUserManager
 from django.db import models
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, first_name, last_name, birth_year,password=None):
+    def create_user(self, email, first_name, last_name, birth_year, 
+                    password=None):
         if (not email
             or not first_name 
             or not last_name 
@@ -21,6 +22,18 @@ class UserManager(BaseUserManager):
         user.save()
         return user 
 
+    def create_employee(self, email, first_name, last_name, birth_year,
+                        password=None):
+        user = self.create_user(
+            email,
+            first_name=first_name,
+            last_name=last_name,
+            birth_year=birth_year,
+            password=password
+        )
+        user.is_employee = True
+        user.save()
+        return user
     
     def create_superuser(self, email, first_name, last_name, birth_year,password=None):
         user = self.create_user(
@@ -29,7 +42,8 @@ class UserManager(BaseUserManager):
             last_name=last_name,
             birth_year=birth_year,
             password=password
-        )       
+        )
+        user.is_employee = True       
         user.is_admin = True 
         user.save()
         return user

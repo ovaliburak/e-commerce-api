@@ -1,25 +1,31 @@
 from decimal import Decimal
 from django.shortcuts import get_object_or_404
-from requests import get
 from rest_framework.views import APIView
 from rest_framework.generics import (
-                                    ListAPIView,
-                                    CreateAPIView,
-                                    RetrieveAPIView,
-                                    DestroyAPIView,
-                                    UpdateAPIView,
-                                    GenericAPIView,
-                                    )
+                                ListAPIView,
+                                CreateAPIView,
+                                RetrieveAPIView,
+                                DestroyAPIView,
+                                UpdateAPIView,
+                                GenericAPIView,
+                                )
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.exceptions import NotAcceptable, ValidationError, PermissionDenied
+from rest_framework.permissions import IsAdminUser
+from rest_framework.exceptions import (
+                                    NotAcceptable, 
+                                    ValidationError, 
+                                    PermissionDenied
+                                    )
 
 from product.models import ProductDiscount, Product
 from . import models
 from . import serializers
-
+from core.permissions import CartOwnerOnly
 
 class CartAPIView(APIView):
+    permission_classes = (CartOwnerOnly, )
+
     def get(self, request):
         user = self.request.user
         cart = get_object_or_404(models.Cart, user=user)
@@ -28,18 +34,23 @@ class CartAPIView(APIView):
 
 class CartItemListAPIView(ListAPIView):
     serializer_class = serializers.CartSerializer
+    permission_classes = (CartOwnerOnly, )
 
     def get_queryset(self):
-        queryset = models.CartItem.objects.filter(cart__user=self.request.user)
-        return queryset
+        if self.request.user.is_authenticated:
+            queryset = models.CartItem.objects.filter(cart__user=self.request.user)
+            return queryset
+        else: 
+            raise PermissionDenied("You must logged in!")
 
 class CreateCartItemAPIView(CreateAPIView):
     serializer_class = serializers.CartSerializer
+    permission_classes = (CartOwnerOnly, )
 
     def create(self, request, *args, **kwargs):
         user = self.request.user 
         cart = get_object_or_404(models.Cart, user=user)
-        product = get_object_or_404(models.Product, id=request.data.get('product'))
+        product = get_object_or_404(Product, id=request.data.get('product'))
         current_product = models.CartItem.objects.filter(cart=cart, product=product)
         if current_product.count() > 0:
             raise  NotAcceptable ('You have added already this product on your Cart')
@@ -62,22 +73,26 @@ class CreateCartItemAPIView(CreateAPIView):
 class RetrieveCartItemAPIView(RetrieveAPIView):
     serializer_class = serializers.CartSerializer
     queryset = models.CartItem.objects.all()
+    permission_classes = (CartOwnerOnly, )
+
     def retrieve(self, request, *args, **kwargs):
         cart_item = self.get_object()
-        if cart_item.cart.user != request.user:
-            raise PermissionDenied ("This cart not belong to you!")
+        # if cart_item.cart.user != request.user:
+        #     raise PermissionDenied ("This cart not belong to you!")
         serializer = self.get_serializer(cart_item)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class UpdateCartItemAPIView(UpdateAPIView):
     serializer_class = serializers.CartItemUpdateSerializer
     queryset = models.CartItem.objects.all()
+    permission_classes = (CartOwnerOnly, )
+
     def update(self, request, *args, **kwargs):
         cart_item = self.get_object()
         cart = get_object_or_404(models.Cart, user=self.request.user)
         old_quantity = cart_item.quantity
         try: 
-            product = get_object_or_404(models.Product, id=request.data.get('product'))
+            product = get_object_or_404(Product, id=request.data.get('product'))
         except Exception as e: 
             raise ValidationError("Product not found!")
         if cart_item.cart.user != request.user: 
@@ -105,10 +120,12 @@ class UpdateCartItemAPIView(UpdateAPIView):
         
 class DeleteCartItemAPIView(DestroyAPIView):
     queryset = models.CartItem.objects.all()
+    permission_classes = (CartOwnerOnly, )
+
     def destroy(self, request, *args, **kwargs):
         cart_item = self.get_object()
-        if cart_item.cart.user != request.user:
-            raise PermissionDenied("This item not belong to you.")
+        # if cart_item.cart.user != request.user:
+        #     raise PermissionDenied("This item not belong to you.")
         cart = get_object_or_404(models.Cart, user=self.request.user)
         product_price = cart_item.product.price 
         quantity = cart_item.quantity 
@@ -121,37 +138,3 @@ class DeleteCartItemAPIView(DestroyAPIView):
         return Response({'message':'item successfull destroyed'}, 
                         status=status.HTTP_204_NO_CONTENT)
 
-
-
-# class AddToCartAPIView(APIView):
-#     def post(self, request, *args, **kwargs):
-
-#         id = request.data.get('id')
-#         if id is None:
-#             return Response({'Message':'Invalid Request'}, status=status.HTTP_400_BAD_REQUEST)
-        
-#         item = get_object_or_404(Product, id=id)
-#         print(item)
-
-#         return Response(status=status.HTTP_200_OK)
-
-# class CreateCartAPIVies(ListCreateAPIView):
-#     queryset = models.Cart.objects.all()
-#     serializer_class = serializers.CartCreateSerializer
-
-#     def get(self, request):
-#         print(self.get_queryset())
-#         serializer = self.get_serializer(self.get_queryset(), many=True)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-    
-#     def create(self, request, *args, **kwargs):
-#         user = request.user 
-#         serializer = self.get_serializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         serializer.save(user=user)
-#         headers = self.get_success_headers(serializer.data)
-#         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-
-
-    
