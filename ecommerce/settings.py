@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'user.apps.UserConfig',
     'product.apps.ProductConfig',
     'cart.apps.CartConfig',
+    'checkout.apps.CheckoutConfig',
     #third_party_packages
     'rest_framework',
     'rest_framework_simplejwt',

@@ -1,5 +1,7 @@
+from dataclasses import fields
 import datetime
 from django.contrib import auth
+from django.forms import ValidationError
 from requests import request
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
@@ -7,8 +9,11 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
+from . import models 
+
 
 User = get_user_model()
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -118,3 +123,40 @@ class LogoutSerializer(serializers.Serializer):
             RefreshToken(self.token).blacklist()
         except TokenError:
             self.fail('bad_token')
+
+class UserAddressSerializer(serializers.ModelSerializer):
+    class Meta: 
+        model = models.UserAddress
+        fields = '__all__'
+
+class UserAddressCreateSerializer(serializers.ModelSerializer):
+    
+    class Meta: 
+        model = models.UserAddress
+        exclude = ('user', )
+
+    def validate(self, attrs):
+        address_line1 = attrs.get('address_line1', None)
+        address_line2 = attrs.get('address_line2', None)
+        # city = attrs.get('city', None)
+        # postal_code = attrs.get('postal_code', None)
+        # country = attrs.get('country', None)
+        # phone = attrs.get('phone', None)
+        if address_line1 is None:
+            raise ValidationError('User must have a address line 1!')
+        elif address_line1 == address_line2:
+            raise ValidationError('Two address line must be different!')
+        return attrs
+        
+    # def create(self, validated_data):
+    #     user = self.request.user
+    #     user_address = models.UserAddress(user=user, **validated_data)
+    #     user_address.save()
+    #     return user_address
+        
+class UserSerializer(serializers.ModelSerializer):
+    user_address = UserAddressSerializer()
+    class Meta:
+        model = User
+        fields = '__all__'
+        

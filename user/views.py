@@ -10,6 +10,13 @@ from core.utils import Util
 import jwt
 from django.conf import settings
 from rest_framework import views
+from rest_framework.generics import (
+                        ListAPIView,
+                        CreateAPIView,
+                        RetrieveUpdateDestroyAPIView,
+                        )
+
+from user.models import UserAddress
 
 from .serializers import (
     RegisterSerializer,
@@ -17,8 +24,10 @@ from .serializers import (
     EmailVerificationSerializer, 
     LoginSerializer,
     LogoutSerializer)
-from core.permissions import IsNotAuthenticated
+from core.permissions import IsNotAuthenticated, AddressOwnerOnly
 from rest_framework.permissions import IsAdminUser
+
+from user import serializers
 
 User =get_user_model()
 
@@ -93,3 +102,32 @@ class LogoutAPIView(generics.GenericAPIView):
         serializer.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserListAPIView(ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = serializers.UserSerializer
+
+class UserAddressListAPIView(ListAPIView):
+    queryset = UserAddress.objects.all()
+    serializer_class = serializers.UserAddressSerializer
+
+    # def list(self, request, *args, **kwargs):
+    #     return super().list(request, *args, **kwargs)
+
+    # def create(self, request, *args, **kwargs):
+    #     return super().create(request, *args, **kwargs)
+
+class UserAddressCreateAPIView(CreateAPIView):
+    queryset = UserAddress.objects.all()
+    serializer_class = serializers.UserAddressCreateSerializer
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=self.request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+class UserAddressRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
+    queryset = UserAddress.objects.all()
+    serializer_class = serializers.UserAddressSerializer
+    permission_classes = (AddressOwnerOnly,)
