@@ -109,12 +109,13 @@ class UpdateCartItemAPIView(UpdateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         if int(old_quantity) > int(quantity):
+        
             cart.total -= Decimal(float(product.price) * float(int(old_quantity)-
                                                                 int(quantity)))
         elif int(old_quantity) == int(quantity):
             pass 
         else:
-            cart.total += Decimal(float(product.price) * float(quantity))
+            cart.total += Decimal(float(product.price) * (int(quantity)-int(old_quantity)))
         cart.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
         
