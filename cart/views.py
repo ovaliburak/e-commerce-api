@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.shortcuts import get_object_or_404
+
 from rest_framework.views import APIView
 from rest_framework.generics import (
                                 ListAPIView,
@@ -7,18 +8,16 @@ from rest_framework.generics import (
                                 RetrieveAPIView,
                                 DestroyAPIView,
                                 UpdateAPIView,
-                                GenericAPIView,
                                 )
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAdminUser
 from rest_framework.exceptions import (
                                     NotAcceptable, 
                                     ValidationError, 
                                     PermissionDenied
                                     )
 
-from product.models import ProductDiscount, Product
+from product.models import Product
 from . import models
 from . import serializers
 from core.permissions import CartOwnerOnly
@@ -125,8 +124,6 @@ class DeleteCartItemAPIView(DestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         cart_item = self.get_object()
-        # if cart_item.cart.user != request.user:
-        #     raise PermissionDenied("This item not belong to you.")
         cart = get_object_or_404(models.Cart, user=self.request.user)
         product_price = cart_item.product.price 
         quantity = cart_item.quantity 
